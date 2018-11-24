@@ -87,8 +87,29 @@ $ docker run --name reddit --rm -it boygruv/otus-reddit:1.0 bash
 ```
 Интеграция с slack.room
 ```sh
-$ travis encrypt "devops-team-otus:<token>#aleksey_ermolaev" --add notifications.slack.rooms --com
+$ travis login --com
+$ travis encrypt "devops-team-otus:<token>#aleksey_ermolaev" --add notifications.slack.rooms --com -r Otus-DevOps-2018-09/boygruv_microservices
 ```
+#### Задание со *
+- Создал образ packer с установленным docker-ce
+```sh
+$ packer validate packer/ubuntu16.json
+$ packer build packer/ubuntu16.json
+```
+- Создал шаблон terraform создающий VM на основе созданного образа packer. Кол-во хостов задаем переменной count
+```sh
+$ cd ./terraform
+$ terraform init
+$ terraform plan
+$ terraform apply
+$ terraform destroy
+```
+- Создал плейбук ansible для запуска на VM докер образа с приложением из удаленного репозитория
+```sh
+$ cd ansible
+$ ansible-playbook playbooks/deploy.yml
+```
+- Добавил loadBalancer для создаваемых терраформом VM. IP адрес LB вывел через output переменную
 
 ******************
 
