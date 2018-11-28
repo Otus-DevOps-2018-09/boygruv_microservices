@@ -1,15 +1,13 @@
-FROM alpine:3.7
-RUN apk update \ 
-    && apk --no-cache add --virtual bash ruby-dev build-base \
-    && apk --no-cache add --virtual ruby ruby-bundler
-    
+FROM ruby:2.2
+RUN apt-get update -qq && apt-get install -y build-essential
+
 ENV APP_HOME /app
 RUN mkdir $APP_HOME
 WORKDIR $APP_HOME
 
-COPY Gemfile* $APP_HOME/
+ADD Gemfile* $APP_HOME/
 RUN bundle install
-COPY . $APP_HOME
+ADD . $APP_HOME
 
 ENV COMMENT_DATABASE_HOST comment_db
 ENV COMMENT_DATABASE comments
