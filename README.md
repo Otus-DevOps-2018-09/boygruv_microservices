@@ -1,5 +1,35 @@
 # boygruv_microservices
 
+## Homework-14
+#### Микросервисы
+- Разбили наше приложение на 3 сервиса: post, comment, ui
+- Для каждого микросервиса создали свой образ докер
+- Корректность Dockerfile проверили через линтер `hadolint <dockerfile>`
+
+#### Оптимизация Dockerfile
+Для оптимизации Dockerfile
+- Уменьшаем количество слоев, для этого стараемся команду RUN выполнять через мультилайн
+- Выполтяем multi-stage для предотвращения помещения в итоговый образ промежуточных файлов
+- Оптимизируем кол-во установленных пакетов (стараемся оставлять только необходимые)
+
+#### bridge - сеть
+Создали bridge-сеть для контейнеров поскольку в сети по умолчанию не работают сетевые алиасы
+```sh
+$ docker network create reddit
+```
+
+#### VOLUME
+Создали volume для хранения данных
+```sh
+$ docker volume create reddit_db 
+```
+Подключение volume к контейнеру
+```sh
+$ docker run -d --network=reddit --network-alias=post_db --network-alias=comment_db -v reddit_db:/data/db mongo:latest
+```
+
+******************
+
 ## Homework-13
 #### Работа с docker-machine
 
