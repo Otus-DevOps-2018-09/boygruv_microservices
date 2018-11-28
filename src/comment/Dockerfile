@@ -1,6 +1,6 @@
 FROM alpine:3.7
 RUN apk update \ 
-    && apk --no-cache add --virtual ruby-dev build-base \
+    && apk --no-cache add --virtual bash ruby-dev build-base \
     && apk --no-cache add --virtual ruby ruby-bundler
     
 ENV APP_HOME /app

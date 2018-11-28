@@ -1,6 +1,6 @@
 FROM alpine:latest
 RUN apk update \ 
-    && apk add ruby-dev build-base \
+    && apk add bash ruby-dev build-base \
     && apk add ruby ruby-bundler \
     && rm -rf /var/cache/apk/*
 
