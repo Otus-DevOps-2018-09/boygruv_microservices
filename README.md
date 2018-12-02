@@ -1,5 +1,49 @@
 # boygruv_microservices
 
+## Homework-15
+#### Типы сетей Docker
+- **None** - сеть (в контейнере присутствует только loopback-интерфейс. Связи с host-машиной и внешними сетями нет)
+
+- **Host** - сеть (связь толькос с хост машиной)
+
+- **Bridge** - сеть (сеть по умолчанию, есть связь с внешними сетями и хост машиной)
+
+Для просмотра информации по bridge-интерфейсам установим пакет `bridge-utils`
+
+```sh
+$ apt install bridge-utils
+```
+Просомтр виртуальных интерфейсов
+```sh
+$ ifconfig | grep br
+$ brctl show <interface>
+```
+Правила `iptables`
+```sh
+$ sudo iptables -nL -t nat
+```
+Docker-proxy
+```sh
+$ ps ax | grep docker-proxy
+```
+
+#### Docker-compose
+Установка
+```sh
+$ pip install docker-compose
+```
+Сборка проекта
+```sh
+$ docker-compose up -d
+```
+>Переменные окружения для docker-compose.yml задаем в файле `.env`
+
+>Имя проекта задается переменной окружения COMPOSE_PROJECT_NAME
+
+> Переопределение инструкций `docker-compose.yml` файла делается через `docker-compose.override.yml` файл
+
+
+****
 ## Homework-14
 #### Микросервисы
 - Разбили наше приложение на 3 сервиса: post, comment, ui
