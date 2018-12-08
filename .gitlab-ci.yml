@@ -14,11 +14,13 @@ before_script:
 
 build_job:
   stage: build
+  tags: my-runner
   script:
     - echo 'Building'
 
 test_unit_job:
   stage: test
+  tags: my-runner
   services:
     - mongo:latest
   script:
@@ -26,10 +28,12 @@ test_unit_job:
 
 test_integration_job:
   stage: test
+  tags: my-runner
   script:
     - echo 'Testing 2'
 
 deploy_job:
   stage: deploy
+  tags: my-runner
   script:
   - echo 'Deploy'
