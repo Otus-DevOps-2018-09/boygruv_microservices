@@ -1,5 +1,12 @@
 # boygruv_microservices
+## Homework-16
+#### Gitlab-CI
+- Подготовил сервер Gitlab при помощи Terraform и Ansible
+- Для формирования docker-compose.yml  использовал template
+- Для передачи внешнего IP адреса созданной VM использовал --extra-vars при запуске плейбука
+- Для запуска установки Gitlab сервера: `cd gitlab-ci/infra/terraform && terraform apply`
 
+****
 ## Homework-15
 #### Типы сетей Docker
 - **None** - сеть (в контейнере присутствует только loopback-интерфейс. Связи с host-машиной и внешними сетями нет)

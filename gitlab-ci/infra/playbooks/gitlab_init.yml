@@ -1,0 +1,23 @@
+- name: Init Gitlab
+  hosts: all
+  become: yes
+  vars:
+    deploy_user: appuser
+
+  tasks:
+    - name: Create folders
+      file: path={{ item }} state=directory
+      loop:
+        - /srv/gitlab/config
+        - /srv/gitlab/data
+        - /srv/gitlab/logs
+
+    - name: Add docker-compose.yml
+      template:
+        src: docker-compose.j2
+        dest: "/srv/gitlab/docker-compose.yml"
+
+    - name: Running Gitlab server
+      shell: docker-compose up -d
+      args:
+        chdir: /srv/gitlab/
