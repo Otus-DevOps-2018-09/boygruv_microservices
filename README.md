@@ -6,6 +6,24 @@
 - Для передачи внешнего IP адреса созданной VM использовал --extra-vars при запуске плейбука
 - Для запуска установки Gitlab сервера: `cd gitlab-ci/infra/terraform && terraform apply`
 
+docker run -d --name gitlab-runner --restart always \
+-v /srv/gitlab-runner/config:/etc/gitlab-runner \
+-v /var/run/docker.sock:/var/run/docker.sock \
+gitlab/gitlab-runner:latest
+
+docker exec -it gitlab-runner gitlab-runner register \
+  --non-interactive \
+  --url "http://35.241.192.103/" \
+  --registration-token "4x5gtySjgyGqXsM_sVT7" \
+  --executor "docker" \
+  --docker-image alpine:latest \
+  --description "my-runner" \
+  --tag-list "linux,xenial,ubuntu,docker" \
+  --run-untagged \
+  --locked="false"
+
+git clone https://github.com/express42/reddit.git && rm -rf ./reddit/.git
+
 ****
 ## Homework-15
 #### Типы сетей Docker
