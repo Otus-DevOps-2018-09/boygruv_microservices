@@ -27,8 +27,10 @@ docker exec -it gitlab-runner gitlab-runner register \
   --run-untagged \
   --locked="false"
 ```
+#### Задание со *
+- Автоматизация создания и регистрации раннеров: добавил ansible плейбук создающий инстанс на GCP инсталлирующий docker-ce + запуск контейнера с gitlab-runner + регистрация раннера на gitlab сервере.
 
-git clone https://github.com/express42/reddit.git && rm -rf ./reddit/.git
+- Канал Slack для мониторинга Gitlab-CI `https://boygruv.slack.com/messages/CEN6BGA2C/`
 
 ****
 ## Homework-15
