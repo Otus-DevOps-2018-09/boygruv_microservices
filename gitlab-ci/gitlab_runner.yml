@@ -37,7 +37,7 @@
   become: yes
 
   vars:
-    runner_url: http://35.241.192.103/
+    runner_url: http://35.241.132.42/
     runner_token: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           65353732313835633234393735313764303762366137343837323534323637636562396665666136
