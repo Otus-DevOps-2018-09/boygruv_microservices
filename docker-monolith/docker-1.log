@@ -1,0 +1,9 @@
+REPOSITORY                TAG                 IMAGE ID            CREATED             SIZE
+boygruv/ubuntu-tmp-file   latest              5da6a0132b36        18 seconds ago      116MB
+ubuntu                    16.04               4a689991aa24        4 weeks ago         116MB
+hello-world               latest              4ab4c602aa5e        2 months ago        1.84kB
+
+
+Отличие контейнера от образа:
+Образ это заготовка для контейнера, образ не имеет IP адреса, MAC адреса, имени хоста и т.д.
+Контейнер это как запущенный компьютер с именем и IP адресом и т.д.
