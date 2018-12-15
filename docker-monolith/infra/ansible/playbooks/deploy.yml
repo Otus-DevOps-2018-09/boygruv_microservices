@@ -1,0 +1,13 @@
+---
+- name: Deploy docker images
+  hosts: all
+  become: true
+  gather_facts: False
+
+  tasks:
+  - name: Create a data container
+    docker_container:
+      name: reddit
+      image: boygruv/otus-reddit:1.0
+      ports:
+       - "9292:9292"
