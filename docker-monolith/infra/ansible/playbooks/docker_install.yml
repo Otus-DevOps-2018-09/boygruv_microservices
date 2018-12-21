@@ -28,11 +28,13 @@
         repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable"
         state: present
 
-    - name: Install Docker CE
+    - name: Install Docker CE + docker-compose
       apt:
-        name: docker-ce
+        name: "{{ item }}"
         state: present
-        update_cache: yes
+      loop:
+        - docker-ce
+        - docker-compose
 
     - name: Install docker-py python package
       pip:

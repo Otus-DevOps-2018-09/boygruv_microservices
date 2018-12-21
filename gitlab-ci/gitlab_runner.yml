@@ -1,0 +1,111 @@
+- name: Create instance
+  hosts: localhost
+  connection: local
+
+  vars:
+    service_account_email: ansible@docker-223416.iam.gserviceaccount.com
+    credentials_file: /home/eav/.ssh/docker-223416-c95988770829.json
+    project_id: docker-223416
+    zone: europe-west1-b
+    machine_type: g1-small
+    image: ubuntu-1604
+
+  tasks:
+    - name: Launch instance
+      gce:
+        instance_names: gitlab-runner-{{ ansible_date_time.epoch }}
+        machine_type: "{{ machine_type }}"
+        image: "{{ image }}"
+        service_account_email: "{{ service_account_email }}"
+        credentials_file: "{{ credentials_file }}"
+        project_id: "{{ project_id }}"
+        zone: "{{ zone }}"
+        tags: runner
+      register: gce
+
+    - name: Wait for SSH to come up
+      wait_for: host={{ item.public_ip }} port=22 delay=10 timeout=60
+      with_items: "{{ gce.instance_data }}"
+
+    - name: Add host to groupname
+      add_host: hostname={{ item.public_ip }} groupname=new_instances
+      with_items: "{{ gce.instance_data }}"
+
+- name: Manage new instance
+  hosts: new_instances
+  connection: ssh
+  become: yes
+
+  vars:
+    runner_url: http://35.187.5.17/
+    runner_token: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          39633733333964346236643366636465386366366262636465636231663661666337353765383166
+          3135616130663662636562613461393631366565623362660a373764343065623536383732636533
+          32393266373034623864326330393830366166333361653165313966376261396164353931346335
+          3465333239633662620a326261383764303963393562386365663037623634363035613039363664
+          38653234613665356166393363666139653561636565366563626363333061376535
+    runner_executor: docker
+    runner_name: runner-{{ runner_executor }}-{{ ansible_date_time.epoch }}
+
+  tasks:
+    - name: Install packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - software-properties-common
+        - python
+        - python-pip
+
+    - name: Import Docker CE repository gpg key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+        id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+
+    - name: Add Docker CE repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable"
+        state: present
+
+    - name: Install Docker CE + docker-compose
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - docker-ce
+        - docker-compose
+
+    - name: Install docker-py python package
+      pip:
+        name: docker-py
+
+    - name: Create a runner data container
+      docker_container:
+        name: gitlab-runner
+        image: gitlab/gitlab-runner:latest
+        state: started
+        restart: yes
+        volumes:
+          - /data/srv/gitlab-runner/config:/etc/gitlab-runner
+          - /var/run/docker.sock:/var/run/docker.sock
+
+    - name: Register runner
+      shell: "docker exec -it gitlab-runner gitlab-runner register \
+                --non-interactive \
+                --url '{{ runner_url }}' \
+                --registration-token '{{ runner_token }}' \
+                --executor '{{ runner_executor }}' \
+                --docker-image alpine:latest \
+                --description '{{ runner_name }}' \
+                --tag-list 'linux,xenial,ubuntu,docker' \
+                --run-untagged \
+                --locked='false'"
+      register: exec_output
+
+    - name: Show exec output
+      debug: msg="{{ exec_output.stdout }}"

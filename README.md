@@ -1,5 +1,39 @@
 # boygruv_microservices
 
+## Homework-16
+#### Gitlab-CI
+- Подготовил сервер Gitlab при помощи Terraform и Ansible
+- Для формирования docker-compose.yml  использовал template
+- Для передачи внешнего IP адреса созданной VM использовал --extra-vars при запуске плейбука
+- Для запуска установки Gitlab сервера: `cd gitlab-ci/infra/terraform && terraform apply`
+
+Запуск gitlab-runner контейнера
+```sh
+docker run -d --name gitlab-runner --restart always \
+  -v /srv/gitlab-runner/config:/etc/gitlab-runner \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  gitlab/gitlab-runner:latest
+```
+
+Регистрация runner
+```sh
+docker exec -it gitlab-runner gitlab-runner register \
+  --non-interactive \
+  --url "http://<ip_address>/" \
+  --registration-token "<token>" \
+  --executor "docker" \
+  --docker-image alpine:latest \
+  --description "my-runner" \
+  --tag-list "linux,xenial,ubuntu,docker" \
+  --run-untagged \
+  --locked="false"
+```
+#### Задание со *
+- Автоматизация создания и регистрации раннеров: добавил ansible плейбук создающий инстанс на GCP инсталлирующий docker-ce + запуск контейнера с gitlab-runner + регистрация раннера на gitlab сервере.
+
+- Канал Slack для мониторинга Gitlab-CI `https://boygruv.slack.com/messages/CEN6BGA2C/`
+
+****
 ## Homework-15
 #### Типы сетей Docker
 - **None** - сеть (в контейнере присутствует только loopback-интерфейс. Связи с host-машиной и внешними сетями нет)
