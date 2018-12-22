@@ -18,3 +18,4 @@ vault.key
 .pytest_cache
 docker.retry
 .env
+docker-compose.*

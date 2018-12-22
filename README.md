@@ -1,13 +1,50 @@
 # boygruv_microservices
+## Homework-18
+#### Мониторинг. Prometheus
+- Просмотр метрик Prometheus: `http://<ip_address>:9090/graph`
+- Пример метрики:
+```sh
+prometheus_build_info{branch="HEAD",goversion="go1.9.1",instance="localhost:9090", job="prometheus", revision= "3a7c51ab70fc7615cd318204d3aa7c078b7c5b20",version="1.8.1"}  1 
+```
+- Targets (цели) - представляют собой системы или процессы, за которыми следит Prometheus `http://<ip_address>:9090/tergets`
+- Просмотр "сырых" данных метрик: `http://<ip_address>:9090/metrics`
+
+#### Конфиг: prometheus.yml
+
+```sh
+---
+global:
+  scrape_interval: '5s'  ## Частота сбора метрик
+
+scrape_configs:
+  - job_name: 'prometheus' ## Джобы
+    static_configs:
+      - targets:
+        - 'localhost:9090' ## Адреса для сбора метрик (endpoints)
+
+  - job_name: 'ui'
+    static_configs:
+      - targets:
+        - 'ui:9292'
+
+  - job_name: 'comment'
+    static_configs:
+      - targets:
+        - 'comment:9292'
+```
+#### Exporters
+- Программа, которая делает метрики доступными для сбора Prometheus
+- Дает возможность конвертировать метрики в нужный для Prometheus формат
+- Используется когда нельзя поменять код приложения
+- Примеры: PostgreSQL, RabbitMQ, Nginx, Node exporter, cAdvisor
+
+
 ## Homework-17
 #### Расширяем Pipeline
 - Добавили окружения dev, stage, production
 - Добавили возможность ручного запуска джоба
 - Добавили условия и ограничения для запуска джоба
 - Добавили в pipeline динамическое окружение (для каждой новой ветки будет создоваться отдельное окружение)
-
-#### Задание со *
-
 
 
 ****
