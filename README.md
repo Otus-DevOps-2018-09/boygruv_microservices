@@ -1,4 +1,17 @@
 # boygruv_microservices
+## Homework-19
+#### Мониторинг docker-контейнеров
+- Для мониторинга docker-контейнеров используем cAdvisor (https://github.com/google/cadvisor)
+- WebUI cAdvisor доступен по адресу: `http://<ip_address>:8080`
+#### Визуализация метрик: Grafana
+- WebUI Grafana доступен по адресу: `http://<ip_address>:3000`
+- Дашборды для Grafana: `https://grafana.com/dashboards`
+
+#### Алертинг
+- Alertmanager - дополнительный компонент для системы мониторинга Prometheus, который отвечает за первичную обработку алертов и дальнейшую отправку оповещений по заданному назначению
+
+- Docker образы микросервисов: https://hub.docker.com/u/boygruv
+
 ## Homework-18
 #### Мониторинг. Prometheus
 - Просмотр метрик Prometheus: `http://<ip_address>:9090/graph`
