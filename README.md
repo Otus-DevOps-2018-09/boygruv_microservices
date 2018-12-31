@@ -1,4 +1,5 @@
 # boygruv_microservices
+
 ## Homework-17
 #### Расширяем Pipeline
 - Добавили окружения dev, stage, production
@@ -8,6 +9,7 @@
 
 
 ****
+
 ## Homework-16
 #### Gitlab-CI
 - Подготовил сервер Gitlab при помощи Terraform и Ansible
