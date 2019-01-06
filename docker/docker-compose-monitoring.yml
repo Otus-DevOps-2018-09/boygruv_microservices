@@ -2,8 +2,6 @@ version: '3.3'
 services:
   prometheus:
     image: ${USERNAME}/prometheus
-    ports:
-      - '9090:9090'
     networks:
       - back_net
       - front_net
@@ -13,6 +11,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention=1d'
+
   node-exporter:
     image: prom/node-exporter:v0.15.2
     user: root
@@ -27,6 +26,7 @@ services:
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.ignored-mount-points="^/(sys|proc|dev|host|etc)($$|/)"'
+
   cadvisor:
     image: google/cadvisor:v0.29.0
     networks:
@@ -39,6 +39,7 @@ services:
       - '/var/lib/docker/:/var/lib/docker:ro'
     ports:
       - '8080:8080'
+
   grafana:
     image: grafana/grafana:5.0.0
     networks:
@@ -46,6 +47,7 @@ services:
       - front_net
     volumes:
       - grafana_data:/var/lib/grafana
+      - ${PWD}/provisioning:/etc/grafana/provisioning
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=secret
@@ -60,8 +62,57 @@ services:
       - front_net
     command:
       - '--config.file=/etc/alertmanager/config.yml'
+      - '--log.level=debug'
     ports:
       - 9093:9093
+
+  mongo_exporter:
+    image: ssalaues/mongodb-exporter:0.6.1
+    environment:
+      - MONGODB_URI='mongodb://post_db:27017'
+    networks:
+      - back_net
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.13.0
+    ports:
+      - '9115:9115'
+    networks:
+      - back_net
+      - front_net
+
+  influxdb:
+    image: influxdb
+    networks:
+      - back_net
+    ports:
+      - '8086:8086'
+
+  telegraf:
+    image: telegraf
+    networks:
+      - back_net
+    depends_on:
+      - influxdb
+    volumes:
+      - /home/docker-user/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - '8094:8094'
+
+  trickster:
+    image: tricksterio/trickster
+    depends_on:
+      - prometheus
+    networks:
+      - back_net
+      - front_net
+    ports:
+      - '9090:9090'
+      - '8082:8082'
+    volumes:
+      - /home/docker-user/trickster.conf:/etc/trickster/trickster.conf
+
 volumes:
   prometheus_data:
   grafana_data:

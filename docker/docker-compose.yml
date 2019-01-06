@@ -9,19 +9,20 @@ services:
         aliases:
           - post_db
           - comment_db
+
   ui:
-    image: ${USERNAME}/ui:${UI_VERSION}
+    image: boygruv/ui
     ports:
-      - ${UI_PORT}:${UI_PORT}/tcp
+      - 9292:9292/tcp
     networks:
       - front_net
   post:
-    image: ${USERNAME}/post:${POST_VERSION}
+    image: boygruv/post
     networks:
       - back_net
       - front_net
   comment:
-    image: ${USERNAME}/comment:${COMMENT_VERSION}
+    image: boygruv/comment
     networks:
       - back_net
       - front_net
@@ -32,3 +33,4 @@ volumes:
 networks:
   back_net:
   front_net:
+
