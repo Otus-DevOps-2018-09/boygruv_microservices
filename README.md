@@ -1,4 +1,5 @@
 # boygruv_microservices
+
 ## Homework-18
 #### Мониторинг. Prometheus
 - Просмотр метрик Prometheus: `http://<ip_address>:9090/graph`
@@ -43,6 +44,7 @@ scrape_configs:
 - Добавлен blackbox мониторинг сервисов. Проверяется доступность сервисов по ссылке `http://ui:9292/healthcheck`
 - Разработан Makefile для автоматизации сборки сервисов и пуша их в docker репозиторий. Файл резместил в `src\Makefile`. Файл позволяет как собирать все проекты сразу, так и каждый по отдельности.
 
+=======
 
 ## Homework-17
 #### Расширяем Pipeline
@@ -53,6 +55,7 @@ scrape_configs:
 
 
 ****
+
 ## Homework-16
 #### Gitlab-CI
 - Подготовил сервер Gitlab при помощи Terraform и Ansible
