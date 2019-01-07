@@ -52,6 +52,46 @@ $ git clone https://github.com/openshift/autoheal
 $ make
 ## Бинарник: _output/local/bin/linux/amd64/autoheal
 ```
+- Т.к. autoheal для работы требуется Kubernetes, я собрал докер образ для работы (boygruv/autoheal) c minikube. Конфиг файл autoheal передается через параметры.
+- Пример конфига autoheal
+```sh
+awx:
+  address: http://<AWX_IP_ADDRESS>/api
+
+  credentials:
+     username: admin      # Логин для AWX
+     password: password   # пароль для AWX
+
+  insecure: true
+
+  project: "Otus"         # Проект AWX
+
+  jobStatusCheckInterval: 1m
+
+throttling:
+  #Интервал в течении которого будут игнорированы повторные срабатывания
+  interval: 1h
+
+rules:
+
+- metadata:
+    name: start-job
+  labels:
+    alertname: ".*Down"   # Шаблон для Alertname
+    job: ".*"             # Шаблон для Job
+  awxJob:
+    template: "Start jobs" # Название запукаемого Template AWX
+```
+- В AWX Template добавляем template с названием "Start jobs" которое будет запускаться при срабатывании алерта
+
+- В конфигурационный файл Alertmanager добавил ресивера autoheal и прописал route при срабатывании алерта
+```sh
+receivers:
+ ...
+- name: autoheal
+  webhook_configs:
+  - url: http://autoheal:9099/alerts
+```
 
 
 
