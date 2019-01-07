@@ -62,6 +62,7 @@ resource "google_compute_instance" "gitlab" {
 
 }
 
+
 resource "google_compute_firewall" "firewall_gitlab" {
   name = "allow-gitlab"
 

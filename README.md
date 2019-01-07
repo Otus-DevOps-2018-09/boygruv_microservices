@@ -1,4 +1,5 @@
 # boygruv_microservices
+
 ## Homework-19
 #### Мониторинг docker-контейнеров
 - Для мониторинга docker-контейнеров используем cAdvisor (https://github.com/google/cadvisor)
@@ -94,6 +95,7 @@ receivers:
 ```
 
 
+=======
 
 ## Homework-18
 #### Мониторинг. Prometheus
@@ -134,6 +136,12 @@ scrape_configs:
 - Используется когда нельзя поменять код приложения
 - Примеры: PostgreSQL, RabbitMQ, Nginx, Node exporter, cAdvisor
 
+#### Задание со *
+- Добавлен мониторинг mongodb
+- Добавлен blackbox мониторинг сервисов. Проверяется доступность сервисов по ссылке `http://ui:9292/healthcheck`
+- Разработан Makefile для автоматизации сборки сервисов и пуша их в docker репозиторий. Файл резместил в `src\Makefile`. Файл позволяет как собирать все проекты сразу, так и каждый по отдельности.
+
+=======
 
 ## Homework-17
 #### Расширяем Pipeline
@@ -144,6 +152,7 @@ scrape_configs:
 
 
 ****
+
 ## Homework-16
 #### Gitlab-CI
 - Подготовил сервер Gitlab при помощи Terraform и Ansible
