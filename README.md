@@ -1,5 +1,60 @@
 # boygruv_microservices
 
+## Homework-20
+#### Система централизированного логирования EFK (ElasticSearch - Fluentd - Kibana)
+- Docker драйвер fluentd: https://docs.docker.com/config/containers/logging/fluentd/
+- Сервис Kibana длоступен на порту 5601
+- Для подключения драйвера логирования fluentd к докер контейнеру прописываем в docker-compose.yml
+```
+...
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: service.ui
+...
+```
+- Для структурированных логов в формате JSON прописываем в конфиге fluentd.conf
+```
+...
+<filter service.post> 
+  @type parser 
+  format json
+  key_name log 
+</filter> 
+...
+```
+- Для НЕ структурированных логов придется разбирать логи при помощи grok-шаблонов (именованных шаблонов регулярных выражений)
+```
+... 
+<filter service.ui>
+  @type parser 
+  format grok 
+  grok_pattern %{RUBY_LOGGER}
+  key_name log 
+</filter> 
+
+<filter service.ui>
+  @type parser
+  format grok
+  <grok>
+    pattern service=%{WORD:service} \| event=%{WORD:event} \| request_id=%{GREEDYDATA:request_id} \| message='%{GREEDYDATA:message}'
+  </grok>
+  <grok>
+    pattern service=%{WORD:service} \| event=%{WORD:event} \| path=%{PATH:path} \| request_id=%{GREEDYDATA:request_id} \| remote_addr=%{IP:addr} \| method= %{WORD:method} \| response_status=%{INT:response_status}
+  </grok>
+  key_name message
+</filter>
+...
+```
+#### Распределенный трейсинг
+- Сбор трассировок помогает получить более глубокие знания о том, как определенные запросы выполняются в распределенной системе
+- OpenZipkin — это система распределенной трассировки (https://zipkin.io/)
+- Для отслеживания время прохождения пакета zipkin добавляет в header служебные данные для полседующего анализа.
+#### Задание со *
+- В сломанном коде, в файле post_app.py сервиса post была установлена задержка в 3 секунды, что отражалось в span-е прохождения пакетов на сервере Zipkin
+
+
 ## Homework-19
 #### Мониторинг docker-контейнеров
 - Для мониторинга docker-контейнеров используем cAdvisor (https://github.com/google/cadvisor)
