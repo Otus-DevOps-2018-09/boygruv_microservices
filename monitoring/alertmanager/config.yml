@@ -1,0 +1,46 @@
+global:
+  slack_api_url: 'https://hooks.slack.com/services/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'
+  smtp_smarthost: 'smtp.mail.ru:587'
+  smtp_from: 'monitoring_eav@mail.ru'
+  smtp_auth_username: 'monitoring_eav@mail.ru'
+  smtp_auth_password: 'smtp_password'
+  resolve_timeout: 1m
+
+route:
+  receiver: 'slack-notifications'
+  routes:
+  - match_re:
+      job: ui|post
+    receiver: 'team-X-mails'
+    continue: true
+  - match_re:
+      job: comment
+    receiver: 'team-Y-mails'
+    continue: true
+  - match_re:
+      severity: ui_HighRequestLatency
+    receiver: 'slack-notifications'
+    continue: true
+  - match_re:
+      job: ui
+    receiver: 'autoheal'
+    continue: true
+  - match_re:
+      job: ui|post|comment
+    receiver: 'slack-notifications'
+
+receivers:
+- name: 'slack-notifications'
+  slack_configs:
+  - channel: '#monitoring'
+- name: 'team-X-mails'
+  email_configs:
+  - to: 'boygruv@sibnet.ru'
+    send_resolved: false
+- name: 'team-Y-mails'
+  email_configs:
+  - to: 'boygruv@gmail.com'
+    send_resolved: false
+- name: autoheal
+  webhook_configs:
+  - url: http://autoheal:9099/alerts

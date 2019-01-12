@@ -1,0 +1,10 @@
+datasources:
+-  access: 'proxy'                       # make grafana perform the requests
+   editable: true                        # whether it should be editable
+   name: 'InfluxDB'                      # name of the datasource
+   org_id: 1                             # id of the organization to tie this datasource to
+   type: 'influxdb'                      # type of the data source
+   url: 'http://influxdb:8086'           # url of the prom instance
+   database: 'telegraf'
+   version: 1                            # well, versioning
+

@@ -2,12 +2,17 @@ USER_NAME = boygruv
 
 # Сборка ВСЕХ докер образаов
 .PHONY: all
-all: ui comment post prometheus
+all: ui comment post prometheus alertmanager
 
 # Сборка докер образа prometheus
 .PHONY: prometheus
 prometheus: 
 	cd ../monitoring/prometheus/ ; docker build -t $(USER_NAME)/prometheus .
+
+# Сборка докер образа alertmanager
+.PHONY: alertmanager
+alertmanager: 
+	cd ../monitoring/alertmanager/ ; docker build -t $(USER_NAME)/alertmanager .
 
 # Сборка докер образа ui
 .PHONY: ui
@@ -29,6 +34,7 @@ post:
 push: 
 	cat ~/.ssh/dockerhub_password.txt | docker login --username $(USER_NAME) --password-stdin
 	docker push $(USER_NAME)/prometheus
+	docker push $(USER_NAME)/alertmanager
 	docker push $(USER_NAME)/ui
 	docker push $(USER_NAME)/comment
 	docker push $(USER_NAME)/post

@@ -1,5 +1,102 @@
 # boygruv_microservices
 
+## Homework-19
+#### Мониторинг docker-контейнеров
+- Для мониторинга docker-контейнеров используем cAdvisor (https://github.com/google/cadvisor)
+- WebUI cAdvisor доступен по адресу: `http://<ip_address>:8080`
+#### Визуализация метрик: Grafana
+- WebUI Grafana доступен по адресу: `http://<ip_address>:3000`
+- Дашборды для Grafana: `https://grafana.com/dashboards`
+
+#### Алертинг
+- Alertmanager - дополнительный компонент для системы мониторинга Prometheus, который отвечает за первичную обработку алертов и дальнейшую отправку оповещений по заданному назначению
+
+- Docker образы микросервисов: https://hub.docker.com/u/boygruv
+
+#### Задание со *
+- Добавил встроенный мониторинг docker-engine. Для проброски порта с метриками в нутрь контейнеров настроил работу docker на адрес 172.17.0.1. Конфигурацию прописал в файле: /etc/docker/daemon.json
+```sh
+{
+  "metrics-addr" : "172.17.0.1:9323",
+  "experimental" : true
+}
+```
+- Во встроенном в Docker мониторинге добавились метрики с docker-engine (кол-во собранных контейнеров, кол-во запущенных и остановленных контейеров и т.д.)
+- Добавил мониторинг docker контейнеров при помощи инструмента Telegraf от InfluxDB. Вывод метрик добавил в отдельный дашборд
+- Добавил в алертинг 95 процентиль времени ответа UI в файл: `monitoring/prometheus/alerts.yml`. Документация: `https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/`
+- Добавил оповещения о событиях по email в файл: `monitoring/alertmanager/config.yml`. Документация: `https://prometheus.io/docs/prometheus/latest/configuration/configuration/`
+- Добавил в Grafana автоматическое добавление источников данных и дашбордов. При выгрузке дашборда для последующей автоматической загрузки необходимо а json файле с дашбордом почистить id дашборда, поставить `"id": null`
+- Для мониторинга хоста через GCP Stackdriver на VM необходимо установить Google Monitoring Agent `https://cloud.google.com/monitoring/agent/install-agent` (при помощи Stackdriver можно собирать следующие метрики: CPU, Memory, Disk, Network traffic, TCP Connection, Proccess, так же возможно собирать метрики с MongoDB. Список всех поддерживаемых плагинов: https://cloud.google.com/monitoring/agent/plugins/)
+- Добавил проксирование запросов к Prometheus через обратный прокси Trickster (https://github.com/Comcast/trickster)
+
+#### AWX - open source версия Ansible Tower
+- https://github.com/ansible/awx
+- Установка (https://habr.com/company/pixonic/blog/352184/):
+```sh
+$ pip install ansible
+$ pip install docker-py
+$ git clone https://github.com/ansible/awx.git
+$ cd awx/installer
+
+## Меняем в inventory параметр postgres_data_dir 
+$ ansible-playbook -i inventory install.yml
+
+## После установки на 80 пору запуститься AWX
+## login: Admin    pass: password
+```
+#### Autoheal - проект команды OpenShift для автоматического иcправления проблем по результатам алертов
+
+- https://github.com/openshift/autoheal
+- Для сборки требуется GO
+```sh
+$ git clone https://github.com/openshift/autoheal
+$ make
+## Бинарник: _output/local/bin/linux/amd64/autoheal
+```
+- Т.к. autoheal для работы требуется Kubernetes, я собрал докер образ для работы (boygruv/autoheal) c minikube. Конфиг файл autoheal передается через параметры.
+- Пример конфига autoheal
+```sh
+awx:
+  address: http://<AWX_IP_ADDRESS>/api
+
+  credentials:
+     username: admin      # Логин для AWX
+     password: password   # пароль для AWX
+
+  insecure: true
+
+  project: "Otus"         # Проект AWX
+
+  jobStatusCheckInterval: 1m
+
+throttling:
+  #Интервал в течении которого будут игнорированы повторные срабатывания
+  interval: 1h
+
+rules:
+
+- metadata:
+    name: start-job
+  labels:
+    alertname: ".*Down"   # Шаблон для Alertname
+    job: ".*"             # Шаблон для Job
+  awxJob:
+    template: "Start jobs" # Название запукаемого Template AWX
+```
+- В AWX Template добавляем template с названием "Start jobs" которое будет запускаться при срабатывании алерта
+
+- В конфигурационный файл Alertmanager добавил ресивера autoheal и прописал route при срабатывании алерта
+```sh
+receivers:
+ ...
+- name: autoheal
+  webhook_configs:
+  - url: http://autoheal:9099/alerts
+```
+
+
+=======
+
 ## Homework-18
 #### Мониторинг. Prometheus
 - Просмотр метрик Prometheus: `http://<ip_address>:9090/graph`

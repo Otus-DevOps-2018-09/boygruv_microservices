@@ -1,0 +1,26 @@
+awx:
+  address: http://35.195.187.196/api
+
+  credentials:
+     username: admin
+     password: password
+
+  insecure: true
+
+  project: "Otus"
+
+  jobStatusCheckInterval: 1m
+
+throttling:
+  interval: 1h
+
+rules:
+
+- metadata:
+    name: start-job
+  labels:
+    alertname: ".*Down"
+    job: ".*"
+  awxJob:
+    template: "Start job"
+
