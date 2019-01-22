@@ -1,0 +1,178 @@
+---
+- name: Configure Workers Hosts
+  hosts: WORKERS
+  become: yes
+  become_method: sudo
+
+  vars:
+    project: docker-223416
+    auth_kind: serviceaccount
+    credentials_file: "/home/eav/.ssh/docker-223416-c95988770829.json"
+    service_account_email: "ansible@docker-223416.iam.gserviceaccount.com"
+    zone: "europe-west1-b"
+    region: "europe-west1"
+
+  tasks:
+    - name: Distribute the Client and Server Certificates
+      copy: 
+        src: "{{ item }}"
+        dest: /home/eav
+      with_fileglob:
+        - files/ca.pem
+        - files/admin.pem
+        - files/admin-key.pem
+        - files/{{ ansible_facts['nodename'] }}-key.pem
+        - files/{{ ansible_facts['nodename'] }}.pem
+        - files/{{ ansible_facts['nodename'] }}.kubeconfig 
+        - files/kube-proxy.kubeconfig
+
+    - name: Install software
+      apt: name={{ item }} state=latest
+      loop:
+        - socat
+        - conntrack
+        - ipset
+
+    - name: Create multiple directory
+      file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - '/etc/cni/net.d'
+        - '/opt/cni/bin'
+        - '/var/lib/kubelet'
+        - '/var/lib/kube-proxy'
+        - '/var/lib/kubernetes'
+        - '/var/run/kubernetes'
+        - '/etc/containerd'
+
+    - name: Download crictl
+      get_url:
+        url: https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.12.0/crictl-v1.12.0-linux-amd64.tar.gz
+        dest: /home/eav/crictl-v1.12.0-linux-amd64.tar.gz
+
+    - name: Download runsc
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-the-hard-way/runsc-50c283b9f56bb7200938d9e207355f05f79f0d17
+        dest: /usr/local/bin/runsc
+        mode: 0755
+
+    - name: Download runc
+      get_url:
+        url: https://github.com/opencontainers/runc/releases/download/v1.0.0-rc5/runc.amd64
+        dest: /usr/local/bin/runc
+        mode: 0755
+
+    - name: Download kubectl
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kubectl
+        dest: /usr/local/bin/kubectl
+        mode: 0755
+
+    - name: Download kube-proxy
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kube-proxy
+        dest: /usr/local/bin/kube-proxy
+        mode: 0755
+
+    - name: Download kubelet
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kubelet
+        dest: /usr/local/bin/kubelet
+        mode: 0755
+
+    - name: Extract crictl.tar 
+      unarchive:
+        src: https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.12.0/crictl-v1.12.0-linux-amd64.tar.gz
+        dest: /usr/local/bin/
+        remote_src: yes
+
+    - name: Extract cni-plugin.tar 
+      unarchive:
+        src: https://github.com/containernetworking/plugins/releases/download/v0.6.0/cni-plugins-amd64-v0.6.0.tgz
+        dest: /opt/cni/bin/
+        remote_src: yes
+
+    - name: Extract containerd.tar 
+      unarchive:
+        src: https://github.com/containerd/containerd/releases/download/v1.2.0-rc.0/containerd-1.2.0-rc.0.linux-amd64.tar.gz
+        dest: /
+        remote_src: yes
+
+    - name: Copy config to /etc/cni/net.d/10-bridge.conf
+      copy: src=files/10-bridge.conf dest=/etc/cni/net.d/10-bridge.conf
+
+    - name: Copy config to /etc/cni/net.d/99-loopback.conf
+      copy: src=files/99-loopback.conf dest=/etc/cni/net.d/99-loopback.conf
+
+    - name: Copy config to /etc/containerd/config.toml
+      copy: src=files/config.toml dest=/etc/containerd/config.toml
+
+    - name: Copy config to /etc/systemd/system/containerd.service
+      copy: src=files/containerd.service dest=/etc/systemd/system/containerd.service
+
+    - name: Distribute the Client and Server Certificates
+      copy: 
+        src: "{{ item }}"
+        dest: /var/lib/kubelet
+      with_fileglob:
+        - files/{{ ansible_facts['nodename'] }}-key.pem
+        - files/{{ ansible_facts['nodename'] }}.pem
+
+    - name: Copy kubeconfig
+      copy: src=files/{{ ansible_facts['nodename'] }}.kubeconfig dest=/var/lib/kubelet/kubeconfig
+
+    - name: Copy ca.pem
+      copy: src=files/ca.pem dest=/var/lib/kubernetes/ca.pem
+
+    - name: Copy /var/lib/kubelet/kubelet-config.yaml
+      copy: src=files/kubelet-config.yaml dest=/var/lib/kubelet/kubelet-config.yaml
+
+    - name: Copy /etc/systemd/system/kubelet.service
+      copy: src=files/kubelet.service dest=/etc/systemd/system/kubelet.service
+
+    - name: Copy kube-proxy.kubeconfig
+      copy: src=files/kube-proxy.kubeconfig dest=/var/lib/kube-proxy/kubeconfig
+
+    - name: Copy /var/lib/kube-proxy/kube-proxy-config.yaml
+      copy: src=files/kube-proxy-config.yaml dest=/var/lib/kube-proxy/kube-proxy-config.yaml
+
+    - name: Copy /etc/systemd/system/kube-proxy.service
+      copy: src=files/kube-proxy.service dest=/etc/systemd/system/kube-proxy.service
+
+    - name: Start containerd service
+      systemd:
+        state: started
+        enabled: yes
+        daemon_reload: yes
+        name: containerd
+
+    - name: Start kubelet service
+      systemd:
+        state: started
+        enabled: yes
+        daemon_reload: yes
+        name: kubelet
+
+    - name: Start kube-proxy service
+      systemd:
+        state: started
+        enabled: yes
+        daemon_reload: yes
+        name: kube-proxy
+
+    - name: kubectl config set-cluster
+      shell: kubectl config set-cluster kubernetes-the-hard-way --certificate-authority=ca.pem --embed-certs=true --server=https://34.76.244.61:6443
+
+    - name: kubectl config set-credentials admin
+      shell: kubectl config set-credentials admin --client-certificate=admin.pem --client-key=admin-key.pem
+
+    - name: kubectl config set-context
+      shell: kubectl config set-context kubernetes-the-hard-way --cluster=kubernetes-the-hard-way --user=admin
+
+    - name: kubectl config use-context
+      shell: kubectl config use-context kubernetes-the-hard-way
+
+    - name: Deploy the coredns cluster add-on
+      shell: kubectl apply -f https://storage.googleapis.com/kubernetes-the-hard-way/coredns.yaml
+

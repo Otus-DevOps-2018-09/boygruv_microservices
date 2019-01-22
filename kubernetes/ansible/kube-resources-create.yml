@@ -1,0 +1,208 @@
+---
+- name: Provisioning Compute Resources
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  vars:
+    project: docker-223416
+    auth_kind: serviceaccount
+    credentials_file: "/home/eav/.ssh/docker-223416-c95988770829.json"
+    service_account_email: "ansible@docker-223416.iam.gserviceaccount.com"
+    zone: "europe-west1-b"
+    region: "europe-west1"
+
+  tasks:
+    - name: Create Kubernetes Network
+      gcp_compute_network:
+        name: "kubernetes-the-hard-way"
+        auto_create_subnetworks: true
+        project: "{{ project }}"
+        auth_kind: "{{ auth_kind }}"
+        service_account_file: "{{ credentials_file }}"
+        state: present
+      register: network
+
+    - name: Create Kubernetes Subnetwork
+      gcp_compute_subnetwork:
+        name: kubernetes
+        region: "{{ region }}"
+        network: "{{ network }}"
+        ip_cidr_range: 10.240.0.0/24
+        project: "{{ project }}"
+        auth_kind: "{{ auth_kind }}"
+        service_account_file: "{{ credentials_file }}"
+        state: present
+      register: subnetwork
+
+    - name: Create internal Firewall Rule
+      gce_net:
+        name: kubernetes-the-hard-way
+        fwname: "kubernetes-the-hard-way-allow-internal"
+        allowed: tcp;udp;icmp
+        state: "present"
+        src_range: ['10.240.0.0/24','10.200.0.0/16']
+        project_id: "{{ project }}"
+        credentials_file: "{{ credentials_file }}"
+        service_account_email: "{{ service_account_email }}"
+
+    - name: Create external Firewall Rule
+      gce_net:
+        name: kubernetes-the-hard-way
+        fwname: "kubernetes-the-hard-way-allow-external"
+        allowed: tcp:22,6443;icmp
+        state: "present"
+        src_range: ['0.0.0.0/0']
+        project_id: "{{ project }}"
+        credentials_file: "{{ credentials_file }}"
+        service_account_email: "{{ service_account_email }}"
+
+    - name: Create Kubernetes Public IP Address
+      gcp_compute_address:
+        name: kubernetes-the-hard-way
+        region: "{{ region }}"
+        project: "{{ project }}"
+        service_account_file: "{{ credentials_file }}"
+        auth_kind: "{{ auth_kind }}"
+      register: address
+
+    - name: create a route
+      gcp_compute_route:
+        name: "kubernetes-route-10-200-{{ item }}-0-24"
+        dest_range: 10.200.{{ item }}.0/24
+        next_hop_ip: 10.240.0.2{{ item }}
+        network: "{{ network }}"
+        project: "{{ project }}"
+        auth_kind: "{{ auth_kind }}"
+        service_account_file: "{{ credentials_file }}"
+        state: present
+      loop: [0,1,2]
+
+    - name: Create Kubernetes Workers
+      gcp_compute_instance:
+        name: worker-{{ item }}
+        machine_type: n1-standard-1
+        can_ip_forward: true
+        disks:
+        - auto_delete: true
+          boot: true
+          initialize_params:
+            source_image: "projects/ubuntu-os-cloud/global/images/family/ubuntu-1804-lts"
+            disk_size_gb: 200
+        network_interfaces:
+        - network: "{{ network }}"
+          subnetwork: "{{ subnetwork }}"
+          network_ip: 10.240.0.2{{ item }}
+          access_configs:
+            - name: 'External NAT'
+              type: 'ONE_TO_ONE_NAT'
+        metadata: 
+          pod-cidr: 10.200.{{ item }}.0/24
+        zone: "{{ zone }}"
+        project: "{{ project }}"
+        auth_kind: "{{ auth_kind }}"
+        service_account_file: "{{ credentials_file }}"
+        scopes: 
+          - https://www.googleapis.com/auth/compute
+          - https://www.googleapis.com/auth/devstorage.read_only
+          - https://www.googleapis.com/auth/service.management.readonly
+          - https://www.googleapis.com/auth/servicecontrol
+          - https://www.googleapis.com/auth/logging.write
+          - https://www.googleapis.com/auth/monitoring
+        tags: 
+          items:
+          - kubernetes-the-hard-way
+          - worker
+        state: present
+      loop: [0,1,2]
+      register: gceworker
+
+    - name: Save host data
+      add_host:
+        hostname: "{{ item.networkInterfaces[0].accessConfigs[0].natIP }}"
+        groupname: gcp_workers
+      with_items: "{{ gceworker.results }}"
+
+    - name: Wait for SSH for instances
+      wait_for:
+        delay: 1
+        host: "{{ item.networkInterfaces[0].accessConfigs[0].natIP }}"
+        port: 22
+        state: started
+        timeout: 30
+      with_items: "{{ gceworker.results }}"
+
+    #######################################
+    - name: Create Kubernetes Controllers
+      gcp_compute_instance:
+        name: controller-{{ item }}
+        machine_type: n1-standard-1
+        can_ip_forward: true
+        disks:
+        - auto_delete: true
+          boot: true
+          initialize_params:
+            source_image: "projects/ubuntu-os-cloud/global/images/family/ubuntu-1804-lts"
+            disk_size_gb: 200
+        network_interfaces:
+        - network: "{{ network }}"
+          subnetwork: "{{ subnetwork }}"
+          network_ip: 10.240.0.1{{ item }}
+          access_configs:
+            - name: 'External NAT'
+              type: 'ONE_TO_ONE_NAT'
+        zone: "{{ zone }}"
+        project: "{{ project }}"
+        auth_kind: "{{ auth_kind }}"
+        service_account_file: "{{ credentials_file }}"
+        scopes: 
+          - https://www.googleapis.com/auth/compute
+          - https://www.googleapis.com/auth/devstorage.read_only
+          - https://www.googleapis.com/auth/service.management.readonly
+          - https://www.googleapis.com/auth/servicecontrol
+          - https://www.googleapis.com/auth/logging.write
+          - https://www.googleapis.com/auth/monitoring
+        tags: 
+          items:
+          - kubernetes-the-hard-way
+          - controller
+        state: present
+      loop:  [0,1,2]
+      register: gcecontroller
+
+    - name: Save host data
+      add_host:
+        hostname: "{{ item.networkInterfaces[0].accessConfigs[0].natIP }}"
+        groupname: gcp_controllers
+      with_items: "{{ gcecontroller.results }}"
+
+    - name: Wait for SSH for instances
+      wait_for:
+        delay: 1
+        host: "{{ item.networkInterfaces[0].accessConfigs[0].natIP }}"
+        port: 22
+        state: started
+        timeout: 30
+      with_items: "{{ gcecontroller.results }}"
+
+
+- name: Configure Controllers Hosts
+  hosts: gcp_controllers
+  become: yes
+  become_method: sudo
+  gather_facts: False
+  tasks:
+    - name: Install python for Ansible 
+      become: yes
+      raw: apt -y update && apt install -y python-minimal
+
+- name: Configure Workers Hosts
+  hosts: gcp_workers
+  become: yes
+  become_method: sudo
+  gather_facts: False
+  tasks:
+    - name: Install python for Ansible 
+      become: yes
+      raw: apt -y update && apt install -y python-minimal
+

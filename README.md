@@ -1,4 +1,20 @@
 # boygruv_microservices
+## Homevork-21
+#### Введение в Kubernetis
+- **Deployment** - задачи
+   - Создание Replication Controller-а (следит, чтобы число запущенных Pod-ов соответствовало описанному);
+   - Ведение истории версий запущенных Pod-ов (для различных стратегий деплоя, для возможностей отката);
+   - Описание процесса деплоя (стратегия, параметры стратегий).
+
+- **Kubernetes The Hard Way** (ручное создание кластера Kubernetes в Google Cloud https://github.com/kelseyhightower/kubernetes-the-hard-way)
+- Созданные файлы в процессе прохождения Kubernetes The Hard Way в папке kubernetes/the_hard_way
+- Задание со *
+   - Создал 3 ansible playbooks
+   - kube-resources-create.yml (создает все ресурсы: сеть, подсеть, правила firewall, выделенный IP и VM контроллеров и воркеров)
+   - kube-dist-controller.yml (провижинет контроллеры)
+   - kube-dist-worker.yml (провижинет воркеров)
+   - для запуска приложения в созданном Kubernetes кластере: `kubectl apply -f kebernetes/reddit/`
+
 
 ## Homework-20
 #### Система централизированного логирования EFK (ElasticSearch - Fluentd - Kibana)

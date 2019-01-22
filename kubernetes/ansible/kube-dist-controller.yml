@@ -1,0 +1,260 @@
+---
+- name: Configure Controllers Hosts
+  hosts: CONTROLLERS
+  become: yes
+  become_method: sudo
+
+  tasks:
+    - name: Distribute the Client and Server Certificates
+      copy: 
+        src:  "{{ item }}"
+        dest: /home/eav
+      with_fileglob:
+        - files/ca.pem
+        - files/ca-key.pem
+        - files/kubernetes-key.pem
+        - files/kubernetes.pem
+        - files/service-account-key.pem
+        - files/service-account.pem
+        - files/admin.kubeconfig 
+        - files/kube-controller-manager.kubeconfig 
+        - files/kube-scheduler.kubeconfig
+        - files/encryption-config.yaml
+        - files/install_etcd.sh
+        - files/kube-apiserver.sh
+        - files/encryption-config.yml
+        - files/kube-create-role-rbac-defautl.yaml
+        - files/kube-cluster-role-binding.yaml
+
+    - name: Extract etcd.tar 
+      unarchive:
+        src: https://github.com/coreos/etcd/releases/download/v3.3.9/etcd-v3.3.9-linux-amd64.tar.gz
+        dest: /home/eav/
+        remote_src: yes
+    
+    - name: Copy etcd to /usr/local/bin
+      copy: remote_src=True src=/home/eav/etcd-v3.3.9-linux-amd64/etcd dest=/usr/local/bin/etcd
+
+    - name: Copy etcdctl to /usr/local/bin
+      copy: remote_src=True src=/home/eav/etcd-v3.3.9-linux-amd64/etcdctl dest=/usr/local/bin/etcdctl
+
+    - name: Set exec mode on etcd file
+      file:
+        path: /usr/local/bin/etcd
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: Set exec mode on etcd file
+      file:
+        path: /usr/local/bin/etcdctl
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: Creates directory /etc/etcd
+      file: path=/etc/etcd state=directory
+
+    - name: Creates directory /var/lib/etcd
+      file: path=/var/lib/etcd state=directory
+
+    - name: Copy crt
+      copy: 
+        src: "{{ item }}"
+        dest: /etc/etcd
+      with_fileglob:
+        - files/ca.pem
+        - files/kubernetes-key.pem
+        - files/kubernetes.pem
+
+    - name: Install etcd service
+      command: bash /home/eav/install_etcd.sh
+
+    - name: Start etcd service
+      systemd:
+        state: started
+        enabled: yes
+        daemon_reload: yes
+        name: etcd
+
+###################################################################
+# Provision the Kubernetes Control Plane
+###################################################################
+    - name: Creates directory /etc/kubernetes/config
+      file: path=/etc/kubernetes/config state=directory
+
+    - name: Creates directory /var/lib/kubernetes/
+      file: path=/var/lib/kubernetes/ state=directory
+
+    - name: Copy pem files
+      copy: 
+        src: "{{ item }}"
+        dest: /var/lib/kubernetes
+      with_fileglob:
+        - files/ca.pem
+        - files/kubernetes-key.pem
+        - files/kubernetes.pem
+        - files/service-account-key.pem
+        - files/service-account.pem
+        - files/encryption-config.yaml
+        - files/kube-controller-manager.kubeconfig
+        - files/kube-scheduler.kubeconfig
+
+
+    - name: Download kube-apiserver
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kube-apiserver
+        dest: /usr/local/bin/kube-apiserver
+        mode: 0755
+
+    - name: Download kube-controller-manager
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kube-controller-manager
+        dest: /usr/local/bin/kube-controller-manager
+        mode: 0755
+
+    - name: Download kube-scheduler
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kube-scheduler
+        dest: /usr/local/bin/kube-scheduler
+        mode: 0755
+
+    - name: Download kubectl
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kubectl
+        dest: /usr/local/bin/kubectl
+        mode: 0755
+
+    - name: Install etcd service
+      command: bash /home/eav/kube-apiserver.sh
+
+    - name: Start kube-apiserver service
+      systemd:
+        state: started
+        daemon_reload: yes
+        enabled: yes
+        name: kube-apiserver
+
+    - name: Start kube-controller-manager service
+      systemd:
+        state: started
+        daemon_reload: yes
+        enabled: yes
+        name: kube-controller-manager
+
+    - name: Start kube-scheduler service
+      systemd:
+        state: started
+        daemon_reload: yes
+        enabled: yes
+        name: kube-scheduler
+    
+    - name: Install Nginx
+      apt: name={{ item }} state=latest
+      loop:
+        - nginx
+        - python-pip
+
+    - name: Install google-api-python-client
+      pip: 
+        name: google-api-python-client
+
+    - name: Copy Nginx config
+      copy: src=files/kubernetes.default.svc.cluster.local dest=/etc/nginx/sites-available/kubernetes.default.svc.cluster.local
+
+    - name: Create link for Nginx server
+      file:
+        src: /etc/nginx/sites-available/kubernetes.default.svc.cluster.local
+        dest: /etc/nginx/sites-enabled/kubernetes.default.svc.cluster.local
+        owner: root
+        group: root
+        state: link
+
+    - name: Start Nginx service
+      systemd:
+        state: restarted
+        enabled: yes
+        name: nginx
+    
+###################################################################
+# RBAC for Kubelet Authorization
+###################################################################
+    - name: Create the system:kube-apiserver-to-kubelet ClusterRole
+      shell: kubectl apply --kubeconfig admin.kubeconfig -f /home/eav/kube-create-role-rbac-defautl.yaml
+
+    - name: The Kubernetes API Server authenticates to the Kubelet as the kubernetes user
+      shell: kubectl apply --kubeconfig admin.kubeconfig -f /home/eav/kube-cluster-role-binding.yaml
+
+- name: Provisioning Compute Resources
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  vars:
+    project: docker-223416
+    auth_kind: serviceaccount
+    credentials_file: "/home/eav/.ssh/docker-223416-c95988770829.json"
+    service_account_email: "ansible@docker-223416.iam.gserviceaccount.com"
+    zone: "europe-west1-b"
+    region: "europe-west1"
+
+  tasks:
+    - name: Create Kubernetes Health Check
+      gcp_healthcheck:
+        service_account_email: "{{ service_account_email }}"
+        credentials_file: "{{ credentials_file }}"
+        project_id: "{{ project }}"
+        healthcheck_name: "kubernetes-health-check"
+        healthcheck_type: HTTP
+        host_header: kubernetes.default.svc.cluster.local
+        request_path: /healthz
+        state: present
+
+    - name: Create load balancer Firewall Rule
+      gce_net:
+        name: kubernetes-the-hard-way
+        fwname: "kubernetes-the-hard-way-allow-health-check"
+        allowed: tcp
+        state: "present"
+        src_range: ['209.85.152.0/22','209.85.204.0/22','35.191.0.0/16']
+        project_id: "{{ project }}"
+        credentials_file: "{{ credentials_file }}"
+        service_account_email: "{{ service_account_email }}"
+
+    - name: create a target pool
+      gcp_compute_target_pool:
+        name: "kubernetes"
+        #instances: 
+        #  - "projects/docker-223416/zones/europe-west1-b/instances/controller-0"
+        #  - "projects/docker-223416/zones/europe-west1-b/instances/controller-1"
+        #  - "projects/docker-223416/zones/europe-west1-b/instances/controller-2"
+        region: "{{ region }}"
+        project: "{{ project }}"
+        auth_kind: "{{ auth_kind }}"
+        service_account_file: "{{ credentials_file }}"
+        state: present
+      register: targetpool
+
+    - name: Create Kubernetes Public IP Address
+      gcp_compute_address:
+        name: kubernetes-the-hard-way
+        region: "{{ region }}"
+        project: "{{ project }}"
+        service_account_file: "{{ credentials_file }}"
+        auth_kind: "{{ auth_kind }}"
+      register: address
+
+    - name: Create a forwarding rule
+      gcp_compute_forwarding_rule:
+          name: "kubernetes-forwarding-rule"
+          region: "{{ region }}"
+          target: "{{ targetpool }}"
+          ip_protocol: TCP
+          port_range: 6443 
+          ip_address: "{{ address.address }}"
+          project: "{{ project }}"
+          auth_kind: "{{ auth_kind }}"
+          service_account_file: "{{ credentials_file }}"
+          state: present
+
+
