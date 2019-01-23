@@ -102,6 +102,10 @@ $ kubectl describe service ui  -n dev  | grep NodePort
 ```
 $ kubectl create clusterrolebinding kubernetes-dashboard  --clusterrole=cluster-admin --serviceaccount=kube-system:kubernetes-dashboard
 ```
+#### Задание со *
+- Создал Terraform план по развертыванию кластера Kubernetes в GKE с использованием модуля `google_container_cluster` (https://www.terraform.io/docs/providers/google/r/container_cluster.html). Файлы разместил kubernetes/terraform
+- Создал манифест kubernetes для присвоения роли `cluster-admin` для нашего ServiceAccount что позволяет подключиться dashboard к кластеру с полными правами.
+
 
 
 ## Homevork-21
