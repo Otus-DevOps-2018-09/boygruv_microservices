@@ -1,4 +1,68 @@
 # boygruv_microservices
+## Homework-23
+
+- **Service** - определяет конечные узлы доступа (Endpoint’ы). *Service* - это лишь абстракция и описание того, как получить доступ к сервису
+   - селекторные сервисы (k8s сам находит POD-ы по label’ам)
+   - безселекторные сервисы (мы вручную описываем конкретные endpoint’ы) 
+- **Способы коммуникации**
+   - **ClusterIP** - дойти до сервиса можно только изнутри кластера
+   - **nodePort** - клиент снаружи кластера приходит на опубликованный порт
+   - **LoadBalancer** - клиент приходит на облачный (aws elb, Google gclb) ресурс балансировки
+   - **ExternalName** - внешний ресурс по отношению к кластеру
+- **Ingress** - это набор правил внутри кластера Kubernetes, предназначенных для того, чтобы входящие подключения могли достичь сервисов (Services). Сами по себе Ingress’ы это просто правила. Для их применения нужен **Ingress Controller**.
+- Основные задачи, решаемые с помощью Ingress’ов:
+   - Организация единой точки входа в приложения снаружи
+   - Обеспечение балансировки трафика
+   - Терминация SSL 
+   - Виртуальный хостинг на основе имен и т.д.
+#### Secret - защитим наш сервис с помощью TLS
+```
+## Посмотрим Ingress IP
+$ kubectl get ingress -n dev
+
+## подготовим сертификат используя IP как CN
+$ openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=35.190.66.90"
+
+## загрузить сертификат в кластер kubernetes
+$ kubectl create secret tls ui-ingress --key tls.key --cert tls.crt -n dev
+
+## Проверить можно командой
+$ kubectl describe secret ui-ingress -n dev
+```
+#### Network Policy (инструмент для декларативного описания потоков трафика)
+```
+## Найдем имя кластера
+$ gcloud beta container clusters list
+
+## Включим network-policy для GKE
+$ gcloud beta container clusters update <cluster-name> --zone=us-central1-a --update-addons=NetworkPolicy=ENABLED
+$ gcloud beta container clusters update <cluster-name> --zone=us-central1-a  --enable-network-policy
+```
+#### Volume
+- Volume **emptyDir**. При создании пода с таким типом просто создается пустой docker volume
+- Volume **gcePersistentDisk**, который будет складывать данные в хранилище GCE
+- **PersistentVolume** - ресурс дискового хранилища, распространенный на весь кластер
+- **PersistentVolumeClaim** - запрос на выдачу части PersistentVolume. Если
+Claim не найдет по заданным параметрам PV внутри кластера, либо тот будет занят другим Claim’ом то он сам создаст нужный ему PV воспользовавшись стандартным StorageClass
+- **StorageClass** - Описывает где (какой провайдер) и какие хранилища создаются
+
+#### Задание со *. 
+Создание Secret в виде Kubernetes-манифеста
+```
+## Генерация tls.crt и tls.key
+## openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=35.190.66.90"
+
+apiVersion: v1
+kind: Secret
+metadata:
+    name: ui-ingress
+    namespace: dev
+type: kubernetes.io/tls
+data:
+    tls.crt: "..."
+    tls.key: "..."
+```
+----
 ## Homework-22
 #### Разворачиваем Kubernetes локально
 - **kubectl** -главная утилита для работы c Kubernetes API
