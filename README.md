@@ -1,4 +1,113 @@
 # boygruv_microservices
+## Homework-22
+#### Разворачиваем Kubernetes локально
+- **kubectl** -главная утилита для работы c Kubernetes API
+- Директории ~/.kube - содержит служебную инфу для kubectl (конфиги, кеши, схемы API)
+- minikube - утилита для разворачивания локальной инсталляции Kubernetes. 
+- Установка kubectl https://kubernetes.io/docs/tasks/tools/install-kubectl/
+- Установка Minikube (необходим гипервизор VirtualBox или KVM)
+```sh
+$ curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.27.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+```
+- Запуск Minukube-кластера
+```sh
+$ minikube start
+```
+> P.S. 
+Если нужна конкретная версия kubernetes, указывайте флаг --kubernetes-version <version> (v1.8.0)
+По умолчанию используется VirtualBox. Если у вас другой гипервизор, то ставьте флаг --vm-driver=<hypervisor>
+- Порядок конфигурирования kubectl
+   - Создать cluster: 
+   ```
+   $ kubectl config set-cluster ... cluster_name
+   ```
+   - Создать данные пользователя (credentials): 
+   ```
+   $ kubectl config set-credentials ... user_name
+   ```
+  - Создать контекст
+  ```
+  $ kubectl config set-context context_name \
+  --cluster=cluster_name \ 
+  --user=user_name
+  ```
+  - Использовать контекст
+  ```
+  $ kubectl config use-context context_name
+  ```
+  - Деплой: 
+  ```
+  $ kubectl apply -f <file_name>.yml
+  ```
+  - Просмотр
+  ```
+  $ kubectl get deployment 
+  ```
+  - Посмотреть Endpoints
+  ```
+  kubectl describe service comment | grep Endpoints
+  ```
+  - Запуск команды в нутри пода
+  ```
+  $ kubectl exec -ti <pod-name> nslookup comment
+  ```
+  - Пропрос порта из пода на localhost
+  ```
+  $ kubectl port-forward <pod-name> 9292:9292
+  ```
+  - Просмотр логов пода
+  ```
+  kubectl logs post-56bbbf6795-7btnm
+  ```
+- По-умолчанию все сервисы имеют тип ClusterIP - это значит, что сервис распологается на внутреннем диапазоне IP-адресов кластера. Снаружи до него нет доступа
+- Тип NodePort - на каждой ноде кластера открывает порт из диапазона 30000-32767 и переправляет трафик с этого порта на тот, который указан в targetPort Pod (похоже на стандартный expose в docker
+
+#### Namespaces
+При старте Kubernetes кластер уже имеет 3 namespace: 
+  - **default** - для объектов для которых не определен другой Namespace (в нем мы работали все этовремя) 
+  - **kube-system** - для объектов созданных Kubernetes’ом и для управления им
+  - **kube-public** - для объектов к которым нужен доступ из любой точки кластера
+- Запуск Minikube Dashboard
+```
+$ minikube service kubernetes-dashboard -n kube-system
+```
+- Запуск приложения в namespace dev
+```
+$ kubectl apply -n dev -f ... 
+```
+#### Google Kubernetes Engine
+- Подключение к Kubernetes кластеру GKE
+```
+$ gcloud container clusters get-credentials cluster-1 --zone 
+us-central1-a --project docker-182408
+``` 
+- Проверить контекст подключения
+```
+$ kubectl config current-context
+```
+- Деплой приложения в GKE в namespace dev из каталога ./kubernetes/reddit/
+```
+$ kubectl apply -f ./kubernetes/reddit/ -n dev
+```
+- Посмотреть внейний адрес кластера
+```
+$ kubectl get nodes -o wide
+```
+- Посмотреть NodePort сервиса
+```
+$ kubectl describe service ui  -n dev  | grep NodePort 
+```
+- Подключение к GKE Dashboard http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/
+- Дать прав ServiceAccount на просмотр кластера (дадим роль `cluster-admin`)
+```
+$ kubectl create clusterrolebinding kubernetes-dashboard  --clusterrole=cluster-admin --serviceaccount=kube-system:kubernetes-dashboard
+```
+#### Задание со *
+- Создал Terraform план по развертыванию кластера Kubernetes в GKE с использованием модуля `google_container_cluster` (https://www.terraform.io/docs/providers/google/r/container_cluster.html). Файлы разместил kubernetes/terraform
+- Создал манифест kubernetes для присвоения роли `cluster-admin` для нашего ServiceAccount что позволяет подключиться dashboard к кластеру с полными правами.
+
+
+
 ## Homevork-21
 #### Введение в Kubernetis
 - **Deployment** - задачи
