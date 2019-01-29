@@ -1,4 +1,100 @@
 # boygruv_microservices
+## Homework-24
+### CI/CD в Kubernetes
+#### Helm - пакетный менеджер для Kubernetes
+- Установка
+```
+Скачать: https://github.com/helm/helm/releases
+Скопировать helm в /usr/local/bin/ 
+```
+- **Helm** читает конфигурацию kubectl (~/.kube/config) и сам определяет текущий контекст (кластер, пользователь, неймспейс. Смена контекста `$ kubectl config set-context`
+- **Tiller** - серверная часть Helm’а (это
+аддон Kubernetes, т.е. Pod, который общается с API Kubernetes). Для его работы требуется назначить ServiceAccount и роли RBAC.
+  ```
+  ## tiller.yml
+  ---
+  apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: tiller
+    namespace: kube-system
+  ---
+  apiVersion: rbac.authorization.k8s.io/v1beta1
+  kind: ClusterRoleBinding
+  metadata:
+    name: tiller
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: cluster-admin
+  subjects:
+    - kind: ServiceAccount
+      name: tiller
+      namespace: kube-system
+  ```
+   - Приеним: `$ kubectl apply -f tiller.yaml`
+   - Запустим tiller-сервер: 
+    `$ helm init --service-account tiller`
+   - Проверка: `$ kubectl get pods -n kube-system --selector app=helm`
+
+- **Chart** - это пакет в Helm.
+   - Установка пакета из каталога: `$ helm install --name test-ui-1 ui/`
+   - Установка релиза: `$ helm install <chart-path> <release-name>`
+   - Просмотр установленных пакетов: `$ helm ls`
+
+- **Templates** - шаблоны https://github.com/helm/helm/blob/master/docs/chart_template_guide
+
+- **Зависимости** - файл requirements.yaml
+  ```
+  dependencies:
+    - name: ui
+      version: "1.0.0"
+      repository: "file://../ui"
+    - name: post
+      version: 1.0.0
+      repository: file://../post
+    - name: comment
+      version: 1.0.0
+      repository: file://../comment
+    - name: mongodb
+      version: 5.3.0
+      repository: https://kubernetes-charts.storage.googleapis.com
+  ```
+   - Обновить зависимости: `$ helm dep update`
+   - Обновление релиза: `$ helm upgrade <release-name> ./reddit`
+
+- **Комманды**
+  ```sh
+  $ kubectl get ingress
+  $ helm install ui --name ui-3
+  $ helm upgrade ui-3 ui/
+  $ helm del --purge ui-3
+
+  $ helm dep update ./reddit
+  $ helm install reddit --name reddit1
+  $ helm upgrade reddit1 ./reddit
+  $ helm del --purge reddit1
+  $ kubectl describe persistentvolumeclaim gitlab-gitlab-storage
+  $ kubectl get pv,pvc,pod --all-namespaces
+
+  $ helm repo add gitlab https://charts.gitlab.io
+  $ helm fetch gitlab/gitlab-omnibus --version 0.1.37 --untar
+
+  $ helm install --name gitlab . -f values.yaml
+  $ helm init --service-account tiller
+    
+  ## Посмотреть сетевые политики NetworkPolicy
+  $ kubectl get netpol
+  ```
+#### Gitlab + Kubernetes
+ - Добавим репозиторий Gitlab: `$ helm repo add gitlab https://charts.gitlab.io`
+ - Скачать Chart Gitlab: `$ helm fetch gitlab/gitlab-omnibus --version 0.1.37 --untar`
+ - Установить: `$ helm install --name gitlab . -f values.yaml` 
+
+#### Задание со *
+Добавил в .gitlab-ci.yml микросервисов ui, post, comment - этап production + функцию production() для выкатки на продакшн при пуше в master ветку микросервисов (запуск выката на продакш в ручном режиме (manual))
+
+----
 ## Homework-23
 
 - **Service** - определяет конечные узлы доступа (Endpoint’ы). *Service* - это лишь абстракция и описание того, как получить доступ к сервису
