@@ -1,4 +1,43 @@
 # boygruv_microservices
+## Homework-25
+### Kubernetes. Мониторинг и логирование
+
+#### Prometheus установка с помощью Helm чарта
+- Загрузим prometheus локально в Charts каталог
+```
+$ cd kubernetes/charts && helm fetch —-untar stable/prometheus
+```
+- Установка Promrtheus
+```
+$ helm upgrade prom . -f custom_values.yml --install  
+```
+ - Метрики можно посмотреть: 
+ `$ curl http://localhost:4194/metrics`
+ - Relabel_config: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#%3Crelabel_config%3E
+ - Grafana - установка с помощью chart: 
+ ```
+ $ helm upgrade --install grafana stable/grafana --set "server.adminPassword=admin" \
+--set "server.service.type=NodePort" \
+--set "server.ingress.enabled=true" \
+--set "server.ingress.hosts={reddit-grafana}"
+```
+#### Логирование
+- Установка Kibana:
+```
+$ helm upgrade --install kibana stable/kibana \ 
+--set "ingress.enabled=true" \ 
+--set "ingress.hosts={reddit-kibana}" \ 
+--set "env.ELASTICSEARCH_URL=http://elasticsearch-logging:9200" \ 
+--version 0.1.1
+```
+#### Задание со *
+- Создал chart с установкой EFK через chart
+- Устанвока chsrt EFK
+```
+$ helm install kubernetes/efk --name efk
+```
+
+----
 ## Homework-24
 ### CI/CD в Kubernetes
 #### Helm - пакетный менеджер для Kubernetes
